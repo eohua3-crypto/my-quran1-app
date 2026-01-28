@@ -10,170 +10,153 @@
         body.dark { --bg: #1a1a1a; --text: #e0e0e0; --primary: #2e7d32; }
         body { margin: 0; font-family: 'Amiri', serif; background: var(--bg); color: var(--text); overflow: hidden; touch-action: none; }
         
-        /* القوائم الذكية */
-        header, footer { position: fixed; width: 100%; background: var(--primary); transition: 0.3s; z-index: 1000; display: flex; justify-content: space-around; align-items: center; }
-        header { top: -120px; padding: 10px 0; }
-        footer { bottom: -120px; padding: 12px 0; border-radius: 15px 15px 0 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); }
-        header.active { top: 0; }
-        footer.active { bottom: 0; }
+        /* القوائم ثابتة الآن في الأعلى والأسفل */
+        header, footer { position: fixed; width: 100%; background: var(--primary); z-index: 1000; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+        header { top: 0; padding: 10px 0; }
+        footer { bottom: 0; padding: 12px 0; border-radius: 15px 15px 0 0; }
 
-        .btn { color: white; cursor: pointer; font-size: 13px; text-align: center; padding: 5px; }
-        .color-dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid white; cursor: pointer; }
+        .btn { color: white; cursor: pointer; font-size: 13px; text-align: center; }
+        .color-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; }
         
-        /* منطقة العرض */
-        #main-view { height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; }
-        .page-card { width: 92%; height: 85%; background: white; border: 4px double var(--gold); border-radius: 15px; padding: 20px; overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; }
+        /* منطقة العرض مع مراعاة مساحة القوائم */
+        #main-view { height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 60px 0; box-sizing: border-box; }
+        .page-card { width: 92%; height: 100%; background: white; border: 4px double var(--gold); border-radius: 15px; padding: 20px; overflow-y: auto; position: relative; }
         body.dark .page-card { background: #252525; }
-        .word { display: inline-block; padding: 0 2px; border-radius: 4px; transition: 0.2s; }
+        .word { display: inline-block; padding: 0 1px; border-radius: 4px; }
         .has-note { border-bottom: 2px dashed var(--gold); }
 
-        /* النوافذ العائمة */
-        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 75%; background: var(--bg); z-index: 2000; transition: 0.4s; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        /* النوافذ العائمة للبحث والملاحظات */
+        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 70%; background: var(--bg); z-index: 2000; transition: 0.4s; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; overflow-y: auto; border-top: 3px solid var(--gold); }
         .panel.active { bottom: 0; }
-        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gold); font-family: 'Amiri'; margin-bottom: 10px; }
+        input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--gold); font-family: 'Amiri'; margin-bottom: 10px; }
     </style>
 </head>
-<body onclick="toggleMenus()" ontouchstart="handleTS(event)" ontouchend="handleTE(event)">
+<body ontouchstart="ts(event)" ontouchend="te(event)">
 
-    <header id="pen-tools" onclick="event.stopPropagation()">
-        <div style="display:flex; gap:12px;">
+    <header onclick="event.stopPropagation()">
+        <div style="display:flex; gap:10px;">
             <div class="color-dot" style="background:#ffeb3b" onclick="setCol('#ffeb3b')"></div>
             <div class="color-dot" style="background:#ff5252" onclick="setCol('#ff5252')"></div>
             <div class="color-dot" style="background:#64ffda" onclick="setCol('#64ffda')"></div>
         </div>
-        <div class="btn" onclick="undoHighlight()">↩ تراجع</div>
-        <div class="btn" onclick="hidePen()" style="color:#ffb3b3">إغلاق ✖</div>
+        <div class="btn" onclick="undo()">↩ تراجع</div>
+        <div class="btn" onclick="toggleDark()">🌙 الوضع</div>
     </header>
 
     <div id="main-view">
-        <div class="page-card" id="content" onclick="event.stopPropagation()">جاري تحميل المصحف...</div>
+        <div class="page-card" id="content" onclick="event.stopPropagation()">جاري التحميل...</div>
     </div>
 
-    <div id="notes-list-panel" class="panel" onclick="event.stopPropagation()">
-        <h3>📝 ملاحظاتي المحفوظة</h3>
-        <div id="notes-container"></div>
-        <button onclick="closePanels()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; margin-top:15px;">إغلاق</button>
+    <div id="notes-panel" class="panel">
+        <h3>📝 ملاحظاتي</h3>
+        <div id="notes-list"></div>
+        <button onclick="closeP()" style="width:100%; padding:10px; margin-top:10px;">إغلاق</button>
     </div>
 
-    <div id="search-panel" class="panel" onclick="event.stopPropagation()">
-        <input type="text" placeholder="ابحث عن آية أو كلمة..." oninput="doSearch(this.value)">
-        <div id="results" style="margin-top:10px;"></div>
-        <button onclick="closePanels()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; margin-top:15px;">إغلاق</button>
+    <div id="search-panel" class="panel">
+        <input type="text" placeholder="ابحث عن آية..." oninput="search(this.value)">
+        <div id="results"></div>
+        <button onclick="closeP()" style="width:100%; padding:10px; margin-top:10px;">إغلاق</button>
     </div>
 
-    <footer id="main-footer" onclick="event.stopPropagation()">
-        <div class="btn" onclick="openPanel('notes-list-panel')">📝 ملاحظات</div>
-        <div class="btn" onclick="showPenTools()">✏️ القلم</div>
-        <div class="btn" id="sura-label" style="font-weight:bold; color:var(--gold); font-size:16px;"></div>
-        <div class="btn" onclick="openPanel('search-panel')">🔍 بحث</div>
-        <div class="btn" onclick="toggleDarkMode()">🌙 الوضع</div>
+    <footer>
+        <div class="btn" onclick="openP('notes-panel')">📝 الملاحظات</div>
+        <div id="sura-label" style="font-weight:bold; color:var(--gold); font-size:16px;"></div>
+        <div class="btn" onclick="openP('search-panel')">🔍 البحث</div>
     </footer>
 
     <script>
-        let curSura = parseInt(localStorage.getItem('lastSura')) || 0;
-        let activeColor = '#ffeb3b';
-        let quranData = [];
-        let highlights = JSON.parse(localStorage.getItem('myHighlights')) || [];
-        let ayahNotes = JSON.parse(localStorage.getItem('myNotes')) || {};
-        let touchX = null, pressTimer;
+        let cur = parseInt(localStorage.getItem('lastSura')) || 0;
+        let col = '#ffeb3b';
+        let data = [];
+        let hls = JSON.parse(localStorage.getItem('myHls')) || [];
+        let nts = JSON.parse(localStorage.getItem('myNts')) || {};
+        let xd = null, pt;
 
-        async function initApp() {
+        async function init() {
             const res = await fetch('https://api.alquran.cloud/v1/quran/quran-uthmani');
             const d = await res.json();
-            quranData = d.data.surahs;
-            renderPage();
-            refreshNotesUI();
+            data = d.data.surahs;
+            render();
+            updateNotes();
         }
 
-        function renderPage() {
-            const s = quranData[curSura];
+        function render() {
+            const s = data[cur];
             document.getElementById('sura-label').innerText = s.name;
-            let html = `<h2 style="text-align:center; color:var(--primary)">${s.name}</h2>`;
+            let h = `<h2 style="text-align:center">${s.name}</h2>`;
             s.ayahs.forEach((a, ai) => {
-                const aid = `s${curSura}a${ai}`;
-                html += `<span class="${ayahNotes[aid]?'has-note':''}" 
-                        onmousedown="startNoteTimer('${aid}')" onmouseup="clearNoteTimer()" 
-                        ontouchstart="startNoteTimer('${aid}')" ontouchend="clearNoteTimer()">`;
+                const aid = `s${cur}a${ai}`;
+                h += `<span class="${nts[aid]?'has-note':''}" onmousedown="st('${aid}')" onmouseup="en()" ontouchstart="st('${aid}')" ontouchend="en()">`;
                 a.text.split(' ').forEach((w, wi) => {
                     const wid = `${aid}w${wi}`;
-                    const hl = highlights.find(x => x.id === wid);
-                    html += `<span id="${wid}" class="word" ${hl?`style="background:${hl.color}"`:''} 
-                            onclick="handleWordClick('${wid}','${w}')">${w}</span> `;
+                    const hl = hls.find(x => x.id === wid);
+                    h += `<span id="${wid}" class="word" ${hl?`style="background:${hl.color}"`:''} onclick="high('${wid}','${w}')">${w}</span> `;
                 });
-                html += `<span style="color:var(--gold)">(${ai+1})</span></span> `;
+                h += `(${ai+1}) </span>`;
             });
-            document.getElementById('content').innerHTML = html;
-            localStorage.setItem('lastSura', curSura);
+            document.getElementById('content').innerHTML = h;
+            localStorage.setItem('lastSura', cur);
             document.getElementById('content').scrollTop = 0;
         }
 
-        function handleWordClick(id, text) {
-            const el = document.getElementById(id);
-            if(el.style.background && el.style.background !== 'transparent') {
-                el.style.background = '';
-                highlights = highlights.filter(x => x.id !== id);
+        function high(id, t) {
+            const e = document.getElementById(id);
+            if(e.style.background && e.style.background !== 'transparent') {
+                e.style.background = '';
+                hls = hls.filter(x => x.id !== id);
             } else {
-                el.style.background = activeColor;
-                highlights.push({id, text, color: activeColor});
+                e.style.background = col;
+                hls.push({id, t, color: col});
             }
-            localStorage.setItem('myHighlights', JSON.stringify(highlights));
+            localStorage.setItem('myHls', JSON.stringify(hls));
         }
 
-        function undoHighlight() {
-            const last = highlights.pop();
-            if(last) { 
-                const el = document.getElementById(last.id);
-                if(el) el.style.background = '';
-                localStorage.setItem('myHighlights', JSON.stringify(highlights));
-            }
+        function undo() {
+            const l = hls.pop();
+            if(l) { const e = document.getElementById(l.id); if(e) e.style.background = ''; localStorage.setItem('myHls', JSON.stringify(hls)); }
         }
 
-        function startNoteTimer(id) { pressTimer = setTimeout(() => {
-            const msg = prompt("اكتب ملاحظتك على هذه الآية:", ayahNotes[id]?.text || "");
-            if(msg !== null) {
-                if(msg.trim()) ayahNotes[id] = {text: msg, sura: quranData[curSura].name}; 
-                else delete ayahNotes[id];
-                localStorage.setItem('myNotes', JSON.stringify(ayahNotes));
-                renderPage(); refreshNotesUI();
+        function st(id) { pt = setTimeout(() => {
+            const m = prompt("اكتب ملاحظتك:", nts[id]?.text || "");
+            if(m !== null) {
+                if(m) nts[id] = {text: m, sura: data[cur].name}; else delete nts[id];
+                localStorage.setItem('myNts', JSON.stringify(nts));
+                render(); updateNotes();
             }
         }, 800); }
-        function clearNoteTimer() { clearTimeout(pressTimer); }
+        function en() { clearTimeout(pt); }
 
-        function refreshNotesUI() {
-            document.getElementById('notes-container').innerHTML = Object.values(ayahNotes).map(n => 
-                `<div style="padding:12px; border-bottom:1px solid #eee; background:#f9f9f9; margin-bottom:5px; border-radius:5px;">
-                    <b style="color:var(--primary)">${n.sura}:</b> ${n.text}
-                </div>`).join('') || "<p style='text-align:center'>لا توجد ملاحظات محفوظة</p>";
+        function updateNotes() {
+            document.getElementById('notes-list').innerHTML = Object.values(nts).map(n => 
+                `<div style="padding:10px; border-bottom:1px solid #eee;"><b>${n.sura}:</b> ${n.text}</div>`).join('') || "لا توجد ملاحظات";
         }
 
-        function doSearch(q) {
-            let resHtml = '';
+        function search(q) {
+            let r = '';
             if(q.length > 1) {
-                quranData.forEach((s, si) => s.ayahs.forEach(a => {
-                    if(a.text.includes(q)) resHtml += `<div onclick="jumpToSura(${si})" style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><b>${s.name}:</b> ${a.text}</div>`;
+                data.forEach((s, si) => s.ayahs.forEach(a => {
+                    if(a.text.includes(q)) r += `<div onclick="go(${si})" style="padding:10px; border-bottom:1px solid #eee;"><b>${s.name}:</b> ${a.text}</div>`;
                 }));
             }
-            document.getElementById('results').innerHTML = resHtml;
+            document.getElementById('results').innerHTML = r;
         }
 
-        function jumpToSura(i) { curSura = i; renderPage(); closePanels(); }
-        function handleTS(e) { touchX = e.touches[0].clientX; }
-        function handleTE(e) {
+        function go(i) { cur = i; render(); closeP(); }
+        function ts(e) { xd = e.touches[0].clientX; }
+        function te(e) {
             let xu = e.changedTouches[0].clientX;
-            if(!touchX || Math.abs(touchX-xu) < 60) return;
-            if(touchX > xu) { if(curSura < 113) curSura++; } else { if(curSura > 0) curSura--; }
-            renderPage(); touchX = null;
+            if(!xd || Math.abs(xd-xu) < 50) return;
+            if(xd > xu) { if(cur < 113) cur++; } else { if(cur > 0) cur--; }
+            render(); xd = null;
         }
 
-        function toggleMenus() { document.getElementById('main-footer').classList.toggle('active'); }
-        function showPenTools() { document.getElementById('pen-tools').classList.add('active'); toggleMenus(); }
-        function hidePen() { document.getElementById('pen-tools').classList.remove('active'); }
-        function openPanel(id) { document.getElementById(id).classList.add('active'); toggleMenus(); }
-        function closePanels() { document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); }
-        function setCol(c) { activeColor = c; }
-        function toggleDarkMode() { document.body.classList.toggle('dark'); }
+        function openP(id) { document.getElementById(id).classList.add('active'); }
+        function closeP() { document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); }
+        function setCol(c) { col = c; }
+        function toggleDark() { document.body.classList.toggle('dark'); }
 
-        initApp();
+        init();
     </script>
 </body>
 </html>
