@@ -3,78 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المصحف الشريف الملون</title>
+    <title>المصحف المطور - ملاحظات وتلوين</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #1b5e20; --gold: #c5a059; --bg: #fdfdfd; --text: #333; }
-        body.dark { --bg: #1a1a1a; --text: #e0e0e0; --primary: #0d320f; }
+        body.dark { --bg: #1a1a1a; --text: #e0e0e0; --primary: #2e7d32; }
         body { margin: 0; font-family: 'Amiri', serif; background: var(--bg); color: var(--text); transition: 0.3s; overflow: hidden; }
-        header { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 22px; font-weight: bold; }
-        #quran-container { height: calc(100vh - 140px); display: flex; align-items: center; justify-content: center; padding: 15px; }
+        header { background: var(--primary); color: white; padding: 10px; text-align: center; display: flex; justify-content: space-around; align-items: center; }
+        
+        /* شريط الألوان */
+        .color-bar { display: flex; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; }
+        .color-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
+        .c1 { background: #ffeb3b; } .c2 { background: #ff5252; } .c3 { background: #64ffda; } .c4 { background: #e1bee7; } .c5 { background: #ffb74d; }
+        
+        #quran-container { height: calc(100vh - 160px); display: flex; align-items: center; justify-content: center; padding: 15px; }
         .page-card { width: 100%; max-width: 500px; height: 100%; background: white; border: 6px double var(--gold); border-radius: 15px; padding: 25px; box-sizing: border-box; overflow-y: auto; position: relative; }
         body.dark .page-card { background: #252525; }
-        .verse { font-size: 26px; line-height: 2.2; text-align: justify; cursor: pointer; }
-        .verse-num { color: var(--primary); font-weight: bold; }
-        footer { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 10px 0; color: white; }
-        .btn { text-align: center; cursor: pointer; font-size: 14px; }
+        
+        .word { cursor: pointer; display: inline-block; padding: 0 2px; border-radius: 4px; user-select: none; }
+        .has-note { border-bottom: 2px dashed var(--gold); }
+
+        /* النوافذ المنبثقة (بحث، ملاحظات، ملونات) */
+        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 75%; background: var(--bg); z-index: 300; transition: 0.4s; border-radius: 25px 25px 0 0; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .panel.active { bottom: 0; }
+        
+        footer { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 10px 0; color: white; align-items: center; }
+        .btn { cursor: pointer; font-size: 13px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+
+        textarea { width: 100%; height: 100px; margin-top: 10px; font-family: 'Amiri'; font-size: 18px; padding: 10px; border-radius: 10px; border: 1px solid var(--gold); }
     </style>
 </head>
 <body>
-    <header id="sura-name">سورة الفاتحة</header>
+
+    <header>
+        <div class="btn" onclick="togglePanel('highlights-panel')">📋 الملونات</div>
+        <div class="color-bar">
+            <div class="color-dot c1" onclick="selectedColor='#ffeb3b'"></div>
+            <div class="color-dot c2" onclick="selectedColor='#ff5252'"></div>
+            <div class="color-dot c3" onclick="selectedColor='#64ffda'"></div>
+            <div class="color-dot c4" onclick="selectedColor='#e1bee7'"></div>
+            <div class="color-dot c5" onclick="selectedColor='#ffb74d'"></div>
+        </div>
+        <div class="btn" onclick="undoLast()">↩ تراجع</div>
+    </header>
+
+    <div id="notes-panel" class="panel">
+        <h3 style="text-align:center">ملاحظاتي المحفوظة</h3>
+        <div id="notes-list"></div>
+        <button onclick="togglePanel('notes-panel')" style="width:100%; margin-top:20px; padding:10px;">إغلاق</button>
+    </div>
+
+    <div id="write-note-panel" class="panel" style="height: 40%;">
+        <h3 id="note-title">كتابة ملاحظة</h3>
+        <textarea id="note-text" placeholder="اكتب ملاحظتك هنا..."></textarea>
+        <button onclick="saveNote()" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:5px; margin-top:10px;">حفظ الملاحظة</button>
+    </div>
+
     <div id="quran-container">
         <div class="page-card" id="content">جاري التحميل...</div>
     </div>
+
     <footer>
-        <div class="btn" onclick="prevPage()">◀ السابق</div>
-        <div class="btn" onclick="toggleDark()">🌙 الوضع</div>
-        <div class="btn" onclick="nextPage()">التالي ▶</div>
+        <div onclick="prevPage()" class="btn">◀</div>
+        <div onclick="togglePanel('notes-panel')" class="btn">📝 ملاحظات</div>
+        <select id="sura-select" onchange="goToSura(this.value)" style="width:25%"></select>
+        <div onclick="toggleSearch()" class="btn">🔍 بحث</div>
+        <div onclick="toggleDark()" class="btn">🌙</div>
+        <div onclick="nextPage()" class="btn">▶</div>
     </footer>
 
     <script>
-        // جلب رقم السورة وحالة الوضع الليلي من الذاكرة التلقائية
         let currentSura = parseInt(localStorage.getItem('lastSura')) || 0;
-        let isDark = localStorage.getItem('darkMode') === 'true'; 
         let quranData = [];
-
-        // تطبيق الوضع الليلي المحفوظ فور تحميل الصفحة
-        if (isDark) document.body.classList.add('dark');
+        let selectedColor = '#ffeb3b';
+        let highlights = JSON.parse(localStorage.getItem('myHighlights')) || [];
+        let notes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
+        let activeAyahId = null;
+        let pressTimer;
 
         async function loadQuran() {
-            try {
-                const res = await fetch('https://api.alquran.cloud/v1/quran/quran-uthmani');
-                const data = await res.json();
-                quranData = data.data.surahs;
-                render();
-            } catch (error) {
-                document.getElementById('content').innerText = "خطأ في تحميل البيانات. تأكد من الاتصال بالإنترنت.";
-            }
+            const res = await fetch('https://api.alquran.cloud/v1/quran/quran-uthmani');
+            const data = await res.json();
+            quranData = data.data.surahs;
+            fillSelect();
+            render();
+            updateNotesList();
         }
 
         function render() {
-            if (quranData.length === 0) return;
             const sura = quranData[currentSura];
-            document.getElementById('sura-name').innerText = sura.name;
-            let html = sura.id !== 1 && sura.id !== 9 ? '<div style="text-align:center; color:var(--primary); font-size:24px; margin-bottom:15px;">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>' : '';
-            sura.ayahs.forEach((a, i) => {
-                let text = a.text;
-                if(i===0) text = text.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "");
-                html += `<span class="verse">${text} <span class="verse-num">﴿${i+1}﴾</span> </span>`;
+            let html = '';
+            sura.ayahs.forEach((a, ayIdx) => {
+                const ayahId = `s${currentSura}a${ayIdx}`;
+                html += `<span class="ayah-block ${notes[ayahId] ? 'has-note' : ''}" 
+                        onmousedown="startPress('${ayahId}')" onmouseup="endPress()" 
+                        ontouchstart="startPress('${ayahId}')" ontouchend="endPress()">`;
+                
+                a.text.split(' ').forEach((word, wIdx) => {
+                    const wordId = `${ayahId}w${wIdx}`;
+                    const h = highlights.find(x => x.id === wordId);
+                    html += `<span id="${wordId}" class="word" ${h ? `style="background:${h.color}"` : ''} 
+                            onclick="highlightWord('${wordId}','${word}')">${word}</span> `;
+                });
+                html += `<span style="color:var(--primary); font-weight:bold;"> (${ayIdx+1}) </span></span>`;
             });
             document.getElementById('content').innerHTML = html;
-            
-            // حفظ السورة الحالية تلقائياً
             localStorage.setItem('lastSura', currentSura);
         }
 
+        // نظام الضغط المطول للملاحظات
+        function startPress(id) {
+            pressTimer = window.setTimeout(() => {
+                activeAyahId = id;
+                document.getElementById('note-title').innerText = "ملاحظة على آية في " + quranData[currentSura].name;
+                document.getElementById('note-text').value = notes[id] || "";
+                togglePanel('write-note-panel');
+            }, 800); 
+        }
+        function endPress() { clearTimeout(pressTimer); }
+
+        function saveNote() {
+            const text = document.getElementById('note-text').value;
+            if (text.trim()) {
+                notes[activeAyahId] = { text, sura: quranData[currentSura].name, id: activeAyahId };
+            } else {
+                delete notes[activeAyahId];
+            }
+            localStorage.setItem('myNotes', JSON.stringify(notes));
+            togglePanel('write-note-panel');
+            render();
+            updateNotesList();
+        }
+
+        function updateNotesList() {
+            const list = document.getElementById('notes-list');
+            list.innerHTML = Object.values(notes).map(n => `
+                <div style="padding:10px; border-bottom:1px solid #ddd;">
+                    <strong>${n.sura}:</strong> <p>${n.text}</p>
+                </div>
+            `).join('') || "لا توجد ملاحظات محفوظة";
+        }
+
+        function togglePanel(id) { document.getElementById(id).classList.toggle('active'); }
+        function highlightWord(id, text) {
+            const el = document.getElementById(id);
+            if (el.style.background) {
+                el.style.background = '';
+                highlights = highlights.filter(h => h.id !== id);
+            } else {
+                el.style.background = selectedColor;
+                highlights.push({ id, text, color: selectedColor });
+            }
+            localStorage.setItem('myHighlights', JSON.stringify(highlights));
+        }
+
+        function fillSelect() {
+            document.getElementById('sura-select').innerHTML = quranData.map((s, i) => 
+                `<option value="${i}" ${i === currentSura ? 'selected' : ''}>${s.name}</option>`).join('');
+        }
+
+        function goToSura(i) { currentSura = parseInt(i); render(); }
         function nextPage() { if(currentSura < 113) { currentSura++; render(); } }
         function prevPage() { if(currentSura > 0) { currentSura--; render(); } }
-        
-        // تبديل وحفظ حالة اللون (الوضع الليلي) تلقائياً
-        function toggleDark() { 
-            const body = document.body;
-            body.classList.toggle('dark');
-            localStorage.setItem('darkMode', body.classList.contains('dark')); 
-        }
+        function toggleDark() { document.body.classList.toggle('dark'); }
 
         loadQuran();
     </script>
