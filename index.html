@@ -3,40 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المصحف المطور - ملاحظات وتلوين</title>
+    <title>المصحف الذكي - واجهة نظيفة</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #1b5e20; --gold: #c5a059; --bg: #fdfdfd; --text: #333; }
         body.dark { --bg: #1a1a1a; --text: #e0e0e0; --primary: #2e7d32; }
         body { margin: 0; font-family: 'Amiri', serif; background: var(--bg); color: var(--text); transition: 0.3s; overflow: hidden; }
-        header { background: var(--primary); color: white; padding: 10px; text-align: center; display: flex; justify-content: space-around; align-items: center; }
         
-        /* شريط الألوان */
-        .color-bar { display: flex; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; }
-        .color-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
+        /* شريط الأدوات العلوي (مخفي افتراضياً) */
+        header { 
+            position: fixed; top: -100px; width: 100%; background: var(--primary); 
+            color: white; padding: 10px 0; transition: 0.4s; z-index: 1000;
+            display: flex; justify-content: center; align-items: center; gap: 15px;
+        }
+        header.active { top: 0; }
+
+        .color-bar { display: flex; gap: 8px; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; }
+        .color-dot { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
         .c1 { background: #ffeb3b; } .c2 { background: #ff5252; } .c3 { background: #64ffda; } .c4 { background: #e1bee7; } .c5 { background: #ffb74d; }
-        
-        #quran-container { height: calc(100vh - 160px); display: flex; align-items: center; justify-content: center; padding: 15px; }
-        .page-card { width: 100%; max-width: 500px; height: 100%; background: white; border: 6px double var(--gold); border-radius: 15px; padding: 25px; box-sizing: border-box; overflow-y: auto; position: relative; }
+
+        /* منطقة القراءة */
+        #quran-container { height: 100vh; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .page-card { width: 90%; max-width: 500px; height: 85%; background: white; border: 4px double var(--gold); border-radius: 15px; padding: 30px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         body.dark .page-card { background: #252525; }
-        
-        .word { cursor: pointer; display: inline-block; padding: 0 2px; border-radius: 4px; user-select: none; }
-        .has-note { border-bottom: 2px dashed var(--gold); }
 
-        /* النوافذ المنبثقة (بحث، ملاحظات، ملونات) */
-        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 75%; background: var(--bg); z-index: 300; transition: 0.4s; border-radius: 25px 25px 0 0; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        /* القائمة السفلية (تظهر وتختفي) */
+        footer { 
+            position: fixed; bottom: -100px; width: 100%; background: var(--primary); 
+            display: flex; justify-content: space-around; padding: 15px 0; 
+            transition: 0.4s; z-index: 1000; border-radius: 20px 20px 0 0;
+        }
+        footer.active { bottom: 0; }
+
+        .btn { color: white; cursor: pointer; text-align: center; font-size: 14px; }
+        .word { display: inline-block; padding: 0 2px; border-radius: 4px; transition: 0.2s; }
+        
+        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 70%; background: var(--bg); z-index: 2000; transition: 0.5s; border-radius: 25px 25px 0 0; padding: 20px; box-sizing: border-box; }
         .panel.active { bottom: 0; }
-        
-        footer { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 10px 0; color: white; align-items: center; }
-        .btn { cursor: pointer; font-size: 13px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-
-        textarea { width: 100%; height: 100px; margin-top: 10px; font-family: 'Amiri'; font-size: 18px; padding: 10px; border-radius: 10px; border: 1px solid var(--gold); }
     </style>
 </head>
-<body>
+<body onclick="toggleMenus(event)">
 
-    <header>
-        <div class="btn" onclick="togglePanel('highlights-panel')">📋 الملونات</div>
+    <header id="pen-tools">
         <div class="color-bar">
             <div class="color-dot c1" onclick="selectedColor='#ffeb3b'"></div>
             <div class="color-dot c2" onclick="selectedColor='#ff5252'"></div>
@@ -45,28 +53,17 @@
             <div class="color-dot c5" onclick="selectedColor='#ffb74d'"></div>
         </div>
         <div class="btn" onclick="undoLast()">↩ تراجع</div>
+        <div class="btn" onclick="closePen()" style="color:#ff5252">✖</div>
     </header>
 
-    <div id="notes-panel" class="panel">
-        <h3 style="text-align:center">ملاحظاتي المحفوظة</h3>
-        <div id="notes-list"></div>
-        <button onclick="togglePanel('notes-panel')" style="width:100%; margin-top:20px; padding:10px;">إغلاق</button>
-    </div>
-
-    <div id="write-note-panel" class="panel" style="height: 40%;">
-        <h3 id="note-title">كتابة ملاحظة</h3>
-        <textarea id="note-text" placeholder="اكتب ملاحظتك هنا..."></textarea>
-        <button onclick="saveNote()" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:5px; margin-top:10px;">حفظ الملاحظة</button>
-    </div>
-
     <div id="quran-container">
-        <div class="page-card" id="content">جاري التحميل...</div>
+        <div class="page-card" id="content" onclick="event.stopPropagation()">جاري التحميل...</div>
     </div>
 
-    <footer>
+    <footer id="main-footer">
         <div onclick="prevPage()" class="btn">◀</div>
-        <div onclick="togglePanel('notes-panel')" class="btn">📝 ملاحظات</div>
-        <select id="sura-select" onchange="goToSura(this.value)" style="width:25%"></select>
+        <div onclick="togglePen()" class="btn">✏️ القلم</div>
+        <div onclick="togglePanel('notes-panel')" class="btn">📝 الملاحظات</div>
         <div onclick="toggleSearch()" class="btn">🔍 بحث</div>
         <div onclick="toggleDark()" class="btn">🌙</div>
         <div onclick="nextPage()" class="btn">▶</div>
@@ -77,74 +74,43 @@
         let quranData = [];
         let selectedColor = '#ffeb3b';
         let highlights = JSON.parse(localStorage.getItem('myHighlights')) || [];
-        let notes = JSON.parse(localStorage.getItem('myNotes')) || {}; 
-        let activeAyahId = null;
-        let pressTimer;
-
+        
         async function loadQuran() {
             const res = await fetch('https://api.alquran.cloud/v1/quran/quran-uthmani');
             const data = await res.json();
             quranData = data.data.surahs;
-            fillSelect();
             render();
-            updateNotesList();
+        }
+
+        // إظهار وإخفاء القوائم عند الضغط على الشاشة
+        function toggleMenus(e) {
+            document.getElementById('main-footer').classList.toggle('active');
+        }
+
+        function togglePen() {
+            document.getElementById('pen-tools').classList.add('active');
+            document.getElementById('main-footer').classList.remove('active');
+        }
+
+        function closePen() {
+            document.getElementById('pen-tools').classList.remove('active');
         }
 
         function render() {
             const sura = quranData[currentSura];
-            let html = '';
+            let html = `<h2 style="text-align:center; color:var(--primary)">${sura.name}</h2>`;
             sura.ayahs.forEach((a, ayIdx) => {
-                const ayahId = `s${currentSura}a${ayIdx}`;
-                html += `<span class="ayah-block ${notes[ayahId] ? 'has-note' : ''}" 
-                        onmousedown="startPress('${ayahId}')" onmouseup="endPress()" 
-                        ontouchstart="startPress('${ayahId}')" ontouchend="endPress()">`;
-                
                 a.text.split(' ').forEach((word, wIdx) => {
-                    const wordId = `${ayahId}w${wIdx}`;
-                    const h = highlights.find(x => x.id === wordId);
-                    html += `<span id="${wordId}" class="word" ${h ? `style="background:${h.color}"` : ''} 
-                            onclick="highlightWord('${wordId}','${word}')">${word}</span> `;
+                    const id = `s${currentSura}a${ayIdx}w${wIdx}`;
+                    const h = highlights.find(x => x.id === id);
+                    html += `<span id="${id}" class="word" ${h ? `style="background:${h.color}"` : ''} onclick="highlightWord('${id}','${word}')">${word}</span> `;
                 });
-                html += `<span style="color:var(--primary); font-weight:bold;"> (${ayIdx+1}) </span></span>`;
+                html += `<span style="color:var(--primary)">(${ayIdx+1})</span> `;
             });
             document.getElementById('content').innerHTML = html;
             localStorage.setItem('lastSura', currentSura);
         }
 
-        // نظام الضغط المطول للملاحظات
-        function startPress(id) {
-            pressTimer = window.setTimeout(() => {
-                activeAyahId = id;
-                document.getElementById('note-title').innerText = "ملاحظة على آية في " + quranData[currentSura].name;
-                document.getElementById('note-text').value = notes[id] || "";
-                togglePanel('write-note-panel');
-            }, 800); 
-        }
-        function endPress() { clearTimeout(pressTimer); }
-
-        function saveNote() {
-            const text = document.getElementById('note-text').value;
-            if (text.trim()) {
-                notes[activeAyahId] = { text, sura: quranData[currentSura].name, id: activeAyahId };
-            } else {
-                delete notes[activeAyahId];
-            }
-            localStorage.setItem('myNotes', JSON.stringify(notes));
-            togglePanel('write-note-panel');
-            render();
-            updateNotesList();
-        }
-
-        function updateNotesList() {
-            const list = document.getElementById('notes-list');
-            list.innerHTML = Object.values(notes).map(n => `
-                <div style="padding:10px; border-bottom:1px solid #ddd;">
-                    <strong>${n.sura}:</strong> <p>${n.text}</p>
-                </div>
-            `).join('') || "لا توجد ملاحظات محفوظة";
-        }
-
-        function togglePanel(id) { document.getElementById(id).classList.toggle('active'); }
         function highlightWord(id, text) {
             const el = document.getElementById(id);
             if (el.style.background) {
@@ -157,12 +123,15 @@
             localStorage.setItem('myHighlights', JSON.stringify(highlights));
         }
 
-        function fillSelect() {
-            document.getElementById('sura-select').innerHTML = quranData.map((s, i) => 
-                `<option value="${i}" ${i === currentSura ? 'selected' : ''}>${s.name}</option>`).join('');
+        function undoLast() {
+            if (highlights.length > 0) {
+                const last = highlights.pop();
+                const el = document.getElementById(last.id);
+                if (el) el.style.background = '';
+                localStorage.setItem('myHighlights', JSON.stringify(highlights));
+            }
         }
 
-        function goToSura(i) { currentSura = parseInt(i); render(); }
         function nextPage() { if(currentSura < 113) { currentSura++; render(); } }
         function prevPage() { if(currentSura > 0) { currentSura--; render(); } }
         function toggleDark() { document.body.classList.toggle('dark'); }
