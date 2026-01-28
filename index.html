@@ -10,64 +10,65 @@
         body.dark { --bg: #1a1a1a; --text: #e0e0e0; --primary: #2e7d32; }
         body { margin: 0; font-family: 'Amiri', serif; background: var(--bg); color: var(--text); overflow: hidden; touch-action: none; }
         
-        /* القوائم ثابتة الآن في الأعلى والأسفل */
-        header, footer { position: fixed; width: 100%; background: var(--primary); z-index: 1000; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
-        header { top: 0; padding: 10px 0; }
-        footer { bottom: 0; padding: 12px 0; border-radius: 15px 15px 0 0; }
+        header, footer { position: fixed; width: 100%; background: var(--primary); transition: 0.3s; z-index: 1000; display: flex; justify-content: space-around; align-items: center; }
+        header { top: -100px; padding: 10px 0; }
+        footer { bottom: -100px; padding: 12px 0; border-radius: 15px 15px 0 0; }
+        header.active { top: 0; }
+        footer.active { bottom: 0; }
 
-        .btn { color: white; cursor: pointer; font-size: 13px; text-align: center; }
-        .color-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; }
+        .btn { color: white; cursor: pointer; font-size: 13px; text-align: center; padding: 5px; }
+        .color-dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid white; cursor: pointer; }
+        .active-pen { border: 2px solid #fff; background: rgba(255,255,255,0.2); border-radius: 8px; }
         
-        /* منطقة العرض مع مراعاة مساحة القوائم */
-        #main-view { height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 60px 0; box-sizing: border-box; }
-        .page-card { width: 92%; height: 100%; background: white; border: 4px double var(--gold); border-radius: 15px; padding: 20px; overflow-y: auto; position: relative; }
+        #main-view { height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .page-card { width: 92%; height: 85%; background: white; border: 4px double var(--gold); border-radius: 15px; padding: 20px; overflow-y: auto; position: relative; }
         body.dark .page-card { background: #252525; }
-        .word { display: inline-block; padding: 0 1px; border-radius: 4px; }
+        .word { display: inline-block; padding: 0 1px; border-radius: 4px; transition: 0.2s; }
         .has-note { border-bottom: 2px dashed var(--gold); }
 
-        /* النوافذ العائمة للبحث والملاحظات */
         .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 70%; background: var(--bg); z-index: 2000; transition: 0.4s; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; overflow-y: auto; border-top: 3px solid var(--gold); }
         .panel.active { bottom: 0; }
-        input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--gold); font-family: 'Amiri'; margin-bottom: 10px; }
     </style>
 </head>
-<body ontouchstart="ts(event)" ontouchend="te(event)">
+<body onclick="toggleAllMenus()" ontouchstart="ts(event)" ontouchend="te(event)">
 
-    <header onclick="event.stopPropagation()">
-        <div style="display:flex; gap:10px;">
+    <header id="h-menu">
+        <div style="display:flex; gap:12px;" onclick="event.stopPropagation()">
             <div class="color-dot" style="background:#ffeb3b" onclick="setCol('#ffeb3b')"></div>
             <div class="color-dot" style="background:#ff5252" onclick="setCol('#ff5252')"></div>
             <div class="color-dot" style="background:#64ffda" onclick="setCol('#64ffda')"></div>
         </div>
-        <div class="btn" onclick="undo()">↩ تراجع</div>
-        <div class="btn" onclick="toggleDark()">🌙 الوضع</div>
+        <div class="btn" onclick="undo(event)">↩ تراجع</div>
+        <div class="btn" onclick="toggleDark(event)">🌙 الوضع</div>
     </header>
 
     <div id="main-view">
-        <div class="page-card" id="content" onclick="event.stopPropagation()">جاري التحميل...</div>
+        <div class="page-card" id="content">جاري التحميل...</div>
     </div>
 
-    <div id="notes-panel" class="panel">
+    <div id="n-panel" class="panel" onclick="event.stopPropagation()">
         <h3>📝 ملاحظاتي</h3>
-        <div id="notes-list"></div>
+        <div id="n-list"></div>
         <button onclick="closeP()" style="width:100%; padding:10px; margin-top:10px;">إغلاق</button>
     </div>
 
-    <div id="search-panel" class="panel">
-        <input type="text" placeholder="ابحث عن آية..." oninput="search(this.value)">
+    <div id="s-panel" class="panel" onclick="event.stopPropagation()">
+        <input type="text" placeholder="ابحث..." oninput="doSearch(this.value)" style="width:90%; padding:10px; font-family:'Amiri'">
         <div id="results"></div>
         <button onclick="closeP()" style="width:100%; padding:10px; margin-top:10px;">إغلاق</button>
     </div>
 
-    <footer>
-        <div class="btn" onclick="openP('notes-panel')">📝 الملاحظات</div>
-        <div id="sura-label" style="font-weight:bold; color:var(--gold); font-size:16px;"></div>
-        <div class="btn" onclick="openP('search-panel')">🔍 البحث</div>
+    <footer id="f-menu">
+        <div class="btn" onclick="openP('n-panel', event)">📝 ملاحظات</div>
+        <div class="btn" id="pen-btn" onclick="togglePenMode(event)">✏️ القلم: <span id="pen-status">مغلق</span></div>
+        <div id="sura-name" style="font-weight:bold; color:var(--gold); font-size:15px;"></div>
+        <div class="btn" onclick="openP('s-panel', event)">🔍 بحث</div>
     </footer>
 
     <script>
         let cur = parseInt(localStorage.getItem('lastSura')) || 0;
         let col = '#ffeb3b';
+        let isPenActive = false; // القلم مغلق افتراضياً
         let data = [];
         let hls = JSON.parse(localStorage.getItem('myHls')) || [];
         let nts = JSON.parse(localStorage.getItem('myNts')) || {};
@@ -78,12 +79,12 @@
             const d = await res.json();
             data = d.data.surahs;
             render();
-            updateNotes();
+            updateN();
         }
 
         function render() {
             const s = data[cur];
-            document.getElementById('sura-label').innerText = s.name;
+            document.getElementById('sura-name').innerText = s.name;
             let h = `<h2 style="text-align:center">${s.name}</h2>`;
             s.ayahs.forEach((a, ai) => {
                 const aid = `s${cur}a${ai}`;
@@ -91,48 +92,63 @@
                 a.text.split(' ').forEach((w, wi) => {
                     const wid = `${aid}w${wi}`;
                     const hl = hls.find(x => x.id === wid);
-                    h += `<span id="${wid}" class="word" ${hl?`style="background:${hl.color}"`:''} onclick="high('${wid}','${w}')">${w}</span> `;
+                    h += `<span id="${wid}" class="word" ${hl?`style="background:${hl.color}"`:''} onclick="high('${wid}','${w}', event)">${w}</span> `;
                 });
                 h += `(${ai+1}) </span>`;
             });
             document.getElementById('content').innerHTML = h;
             localStorage.setItem('lastSura', cur);
-            document.getElementById('content').scrollTop = 0;
         }
 
-        function high(id, t) {
-            const e = document.getElementById(id);
-            if(e.style.background && e.style.background !== 'transparent') {
-                e.style.background = '';
+        // التلوين يعمل فقط إذا كان القلم مفعلاً
+        function high(id, t, e) {
+            if(!isPenActive) return; // لا تلون إذا كان القلم مغلقاً
+            e.stopPropagation();
+            const el = document.getElementById(id);
+            if(el.style.background && el.style.background !== 'transparent') {
+                el.style.background = '';
                 hls = hls.filter(x => x.id !== id);
             } else {
-                e.style.background = col;
+                el.style.background = col;
                 hls.push({id, t, color: col});
             }
             localStorage.setItem('myHls', JSON.stringify(hls));
         }
 
-        function undo() {
-            const l = hls.pop();
-            if(l) { const e = document.getElementById(l.id); if(e) e.style.background = ''; localStorage.setItem('myHls', JSON.stringify(hls)); }
+        function togglePenMode(e) {
+            e.stopPropagation();
+            isPenActive = !isPenActive;
+            document.getElementById('pen-status').innerText = isPenActive ? "مفعل" : "مغلق";
+            document.getElementById('pen-btn').classList.toggle('active-pen');
         }
+
+        function toggleAllMenus() {
+            document.getElementById('h-menu').classList.toggle('active');
+            document.getElementById('f-menu').classList.toggle('active');
+        }
+
+        function undo(e) { e.stopPropagation(); const l = hls.pop(); if(l) { const el = document.getElementById(l.id); if(el) el.style.background = ''; localStorage.setItem('myHls', JSON.stringify(hls)); } }
+        function setCol(c) { col = c; }
+        function openP(id, e) { e.stopPropagation(); document.getElementById(id).classList.add('active'); }
+        function closeP() { document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); }
+        function toggleDark(e) { e.stopPropagation(); document.body.classList.toggle('dark'); }
 
         function st(id) { pt = setTimeout(() => {
             const m = prompt("اكتب ملاحظتك:", nts[id]?.text || "");
             if(m !== null) {
                 if(m) nts[id] = {text: m, sura: data[cur].name}; else delete nts[id];
                 localStorage.setItem('myNts', JSON.stringify(nts));
-                render(); updateNotes();
+                render(); updateN();
             }
         }, 800); }
         function en() { clearTimeout(pt); }
 
-        function updateNotes() {
-            document.getElementById('notes-list').innerHTML = Object.values(nts).map(n => 
+        function updateN() {
+            document.getElementById('n-list').innerHTML = Object.values(nts).map(n => 
                 `<div style="padding:10px; border-bottom:1px solid #eee;"><b>${n.sura}:</b> ${n.text}</div>`).join('') || "لا توجد ملاحظات";
         }
 
-        function search(q) {
+        function doSearch(q) {
             let r = '';
             if(q.length > 1) {
                 data.forEach((s, si) => s.ayahs.forEach(a => {
@@ -146,15 +162,10 @@
         function ts(e) { xd = e.touches[0].clientX; }
         function te(e) {
             let xu = e.changedTouches[0].clientX;
-            if(!xd || Math.abs(xd-xu) < 50) return;
+            if(!xd || Math.abs(xd-xu) < 60) return;
             if(xd > xu) { if(cur < 113) cur++; } else { if(cur > 0) cur--; }
             render(); xd = null;
         }
-
-        function openP(id) { document.getElementById(id).classList.add('active'); }
-        function closeP() { document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); }
-        function setCol(c) { col = c; }
-        function toggleDark() { document.body.classList.toggle('dark'); }
 
         init();
     </script>
