@@ -2,141 +2,138 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المصحف الذكي - واجهة نظيفة</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>المصحف الذكي - تقليب أفقي</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #1b5e20; --gold: #c5a059; --bg: #fdfdfd; --text: #333; }
         body.dark { --bg: #1a1a1a; --text: #e0e0e0; --primary: #2e7d32; }
-        body { margin: 0; font-family: 'Amiri', serif; background: var(--bg); color: var(--text); transition: 0.3s; overflow: hidden; }
+        body { margin: 0; font-family: 'Amiri', serif; background: var(--bg); color: var(--text); overflow: hidden; touch-action: none; }
         
-        /* شريط الأدوات العلوي (مخفي افتراضياً) */
         header { 
             position: fixed; top: -100px; width: 100%; background: var(--primary); 
-            color: white; padding: 10px 0; transition: 0.4s; z-index: 1000;
+            padding: 10px 0; transition: 0.3s; z-index: 1000;
             display: flex; justify-content: center; align-items: center; gap: 15px;
         }
         header.active { top: 0; }
 
-        .color-bar { display: flex; gap: 8px; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; }
-        .color-dot { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
-        .c1 { background: #ffeb3b; } .c2 { background: #ff5252; } .c3 { background: #64ffda; } .c4 { background: #e1bee7; } .c5 { background: #ffb74d; }
-
-        /* منطقة القراءة */
-        #quran-container { height: 100vh; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .page-card { width: 90%; max-width: 500px; height: 85%; background: white; border: 4px double var(--gold); border-radius: 15px; padding: 30px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #main-view { height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .page-card { 
+            width: 90%; height: 85%; background: white; border: 4px double var(--gold); 
+            border-radius: 15px; padding: 20px; overflow-y: auto; transition: transform 0.3s ease-out;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
         body.dark .page-card { background: #252525; }
 
-        /* القائمة السفلية (تظهر وتختفي) */
         footer { 
             position: fixed; bottom: -100px; width: 100%; background: var(--primary); 
-            display: flex; justify-content: space-around; padding: 15px 0; 
-            transition: 0.4s; z-index: 1000; border-radius: 20px 20px 0 0;
+            display: flex; justify-content: space-around; padding: 15px 0; transition: 0.3s; z-index: 1000;
         }
         footer.active { bottom: 0; }
 
-        .btn { color: white; cursor: pointer; text-align: center; font-size: 14px; }
-        .word { display: inline-block; padding: 0 2px; border-radius: 4px; transition: 0.2s; }
-        
-        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 70%; background: var(--bg); z-index: 2000; transition: 0.5s; border-radius: 25px 25px 0 0; padding: 20px; box-sizing: border-box; }
-        .panel.active { bottom: 0; }
+        .color-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; cursor: pointer; }
+        .btn { color: white; cursor: pointer; font-size: 14px; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px; }
+        .word { display: inline-block; padding: 0 2px; border-radius: 4px; transition: background 0.2s; }
     </style>
 </head>
-<body onclick="toggleMenus(event)">
+<body onclick="toggleInterface()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">
 
-    <header id="pen-tools">
-        <div class="color-bar">
-            <div class="color-dot c1" onclick="selectedColor='#ffeb3b'"></div>
-            <div class="color-dot c2" onclick="selectedColor='#ff5252'"></div>
-            <div class="color-dot c3" onclick="selectedColor='#64ffda'"></div>
-            <div class="color-dot c4" onclick="selectedColor='#e1bee7'"></div>
-            <div class="color-dot c5" onclick="selectedColor='#ffb74d'"></div>
+    <header id="pen-tools" onclick="event.stopPropagation()">
+        <div style="display:flex; gap:10px;">
+            <div class="color-dot" style="background:#ffeb3b" onclick="setCol('#ffeb3b')"></div>
+            <div class="color-dot" style="background:#ff5252" onclick="setCol('#ff5252')"></div>
+            <div class="color-dot" style="background:#64ffda" onclick="setCol('#64ffda')"></div>
         </div>
-        <div class="btn" onclick="undoLast()">↩ تراجع</div>
-        <div class="btn" onclick="closePen()" style="color:#ff5252">✖</div>
+        <div class="btn" onclick="undo()">↩ تراجع</div>
+        <div class="btn" onclick="hidePen()" style="color:#ffb3b3">إغلاق ✖</div>
     </header>
 
-    <div id="quran-container">
+    <div id="main-view">
         <div class="page-card" id="content" onclick="event.stopPropagation()">جاري التحميل...</div>
     </div>
 
-    <footer id="main-footer">
-        <div onclick="prevPage()" class="btn">◀</div>
-        <div onclick="togglePen()" class="btn">✏️ القلم</div>
-        <div onclick="togglePanel('notes-panel')" class="btn">📝 الملاحظات</div>
-        <div onclick="toggleSearch()" class="btn">🔍 بحث</div>
-        <div onclick="toggleDark()" class="btn">🌙</div>
-        <div onclick="nextPage()" class="btn">▶</div>
+    <footer id="main-footer" onclick="event.stopPropagation()">
+        <div class="btn" onclick="showPen()">✏️ القلم</div>
+        <div id="sura-name" style="color:white; font-weight:bold;"></div>
+        <div class="btn" onclick="toggleDark()">🌙 الوضع</div>
     </footer>
 
     <script>
-        let currentSura = parseInt(localStorage.getItem('lastSura')) || 0;
-        let quranData = [];
-        let selectedColor = '#ffeb3b';
+        let cur = parseInt(localStorage.getItem('lastSura')) || 0;
+        let col = '#ffeb3b';
+        let data = [];
         let highlights = JSON.parse(localStorage.getItem('myHighlights')) || [];
-        
-        async function loadQuran() {
+        let xDown = null;
+
+        async function load() {
             const res = await fetch('https://api.alquran.cloud/v1/quran/quran-uthmani');
-            const data = await res.json();
-            quranData = data.data.surahs;
+            const d = await res.json();
+            data = d.data.surahs;
             render();
         }
 
-        // إظهار وإخفاء القوائم عند الضغط على الشاشة
-        function toggleMenus(e) {
-            document.getElementById('main-footer').classList.toggle('active');
-        }
-
-        function togglePen() {
-            document.getElementById('pen-tools').classList.add('active');
-            document.getElementById('main-footer').classList.remove('active');
-        }
-
-        function closePen() {
-            document.getElementById('pen-tools').classList.remove('active');
-        }
-
         function render() {
-            const sura = quranData[currentSura];
-            let html = `<h2 style="text-align:center; color:var(--primary)">${sura.name}</h2>`;
-            sura.ayahs.forEach((a, ayIdx) => {
-                a.text.split(' ').forEach((word, wIdx) => {
-                    const id = `s${currentSura}a${ayIdx}w${wIdx}`;
-                    const h = highlights.find(x => x.id === id);
-                    html += `<span id="${id}" class="word" ${h ? `style="background:${h.color}"` : ''} onclick="highlightWord('${id}','${word}')">${word}</span> `;
+            if (!data[cur]) return;
+            const s = data[cur];
+            document.getElementById('sura-name').innerText = s.name;
+            let h = `<h2 style="text-align:center; color:var(--primary)">${s.name}</h2>`;
+            s.ayahs.forEach((a, ai) => {
+                a.text.split(' ').forEach((w, wi) => {
+                    const id = `s${cur}a${ai}w${wi}`;
+                    const hl = highlights.find(x => x.id === id);
+                    h += `<span id="${id}" class="word" ${hl ? `style="background:${hl.color}"` : ''} onclick="high('${id}','${w}')">${w}</span> `;
                 });
-                html += `<span style="color:var(--primary)">(${ayIdx+1})</span> `;
+                h += `<span style="color:var(--gold)">(${ai+1})</span> `;
             });
-            document.getElementById('content').innerHTML = html;
-            localStorage.setItem('lastSura', currentSura);
+            document.getElementById('content').innerHTML = h;
+            localStorage.setItem('lastSura', cur);
+            document.getElementById('content').scrollTop = 0;
         }
 
-        function highlightWord(id, text) {
-            const el = document.getElementById(id);
-            if (el.style.background) {
-                el.style.background = '';
-                highlights = highlights.filter(h => h.id !== id);
+        // --- نظام التلوين والتراجع (تم الإصلاح) ---
+        function high(id, t) {
+            const e = document.getElementById(id);
+            if(e.style.background && e.style.background !== 'transparent' && e.style.background !== '') {
+                e.style.background = '';
+                highlights = highlights.filter(x => x.id !== id);
             } else {
-                el.style.background = selectedColor;
-                highlights.push({ id, text, color: selectedColor });
+                e.style.background = col;
+                highlights.push({id, t, color: col});
             }
             localStorage.setItem('myHighlights', JSON.stringify(highlights));
         }
 
-        function undoLast() {
-            if (highlights.length > 0) {
-                const last = highlights.pop();
-                const el = document.getElementById(last.id);
-                if (el) el.style.background = '';
-                localStorage.setItem('myHighlights', JSON.stringify(highlights));
+        function undo() {
+            if (highlights.length === 0) return;
+            const last = highlights.pop();
+            const el = document.getElementById(last.id);
+            if (el) {
+                el.style.background = ''; // إزالة اللون من الشاشة فوراً
             }
+            localStorage.setItem('myHighlights', JSON.stringify(highlights));
         }
 
-        function nextPage() { if(currentSura < 113) { currentSura++; render(); } }
-        function prevPage() { if(currentSura > 0) { currentSura--; render(); } }
+        // --- نظام السحب الأفقي (Swipe) ---
+        function handleTouchStart(evt) { xDown = evt.touches[0].clientX; }
+        function handleTouchEnd(evt) {
+            if (!xDown) return;
+            let xUp = evt.changedTouches[0].clientX;
+            let xDiff = xDown - xUp;
+            if (Math.abs(xDiff) > 50) { // حساسية السحب
+                if (xDiff > 0) next(); else prev();
+            }
+            xDown = null;
+        }
+
+        function toggleInterface() { document.getElementById('main-footer').classList.toggle('active'); }
+        function showPen() { document.getElementById('pen-tools').classList.add('active'); }
+        function hidePen() { document.getElementById('pen-tools').classList.remove('active'); }
+        function setCol(c) { col = c; }
+        function next() { if(cur < 113) { cur++; render(); } }
+        function prev() { if(cur > 0) { cur--; render(); } }
         function toggleDark() { document.body.classList.toggle('dark'); }
 
-        loadQuran();
+        load();
     </script>
 </body>
 </html>
